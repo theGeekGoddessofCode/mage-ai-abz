@@ -31,6 +31,12 @@ class Teradata(Source):
         if self.ssh_tunnel is not None:
             self.ssh_tunnel.stop()
             self.ssh_tunnel = None"""
+    
+     def close_connection(self, connection):
+        connection.close()
+        if self.ssh_tunnel is not None:
+            self.ssh_tunnel.stop()
+            self.ssh_tunnel = None
 
         #client.close_connection(Teradata)
 
@@ -49,7 +55,17 @@ class Teradata(Source):
         return query
 
     def test_connection(self) -> None:
-        conn = self.build_connection()
+        teradata_connection = self.build_connection()
+        conn = teradata_connection.build_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""SELECT name FROM v$database""")
+        except Exception as exc:
+            self.logger.error(f"test_connection exception: {exc}")
+            raise exc
+        finally:
+            teradata_connection.close_connection(conn)
+        return
 
     def column_type_mapping(self, column_type: str, column_format: str = None) -> str:
         if COLUMN_FORMAT_DATETIME == column_format:
